@@ -1,8 +1,8 @@
 import { Router } from "express";
+import { authRoutes } from "./authRoutes";
+import { userRoutes } from "./userRoutes";
 
 export const apiRouter = Router();
 
-apiRouter.get("/v1" , (req,res)=>{
-    console.log('hehe');
-    
-});
+apiRouter.use("/auth", authRoutes);
+apiRouter.use('/user', userRoutes);

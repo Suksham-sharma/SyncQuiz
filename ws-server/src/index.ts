@@ -22,11 +22,11 @@ wss.on("connection", (ws: WebSocket) => {
 
 async function startServer() {
   try {
-  } catch (error: any) {
     server.listen(8080, () => {
       console.log("Server started at Port 8080 ... ");
     });
-    console.log("Error while starting the server");
+  } catch (error: any) {
+    console.log("Error while starting the server", error);
   }
 
   await processRequests();

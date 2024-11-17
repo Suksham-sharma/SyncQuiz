@@ -16,7 +16,7 @@ wss.on("connection", (ws: WebSocket) => {
   });
 
   ws.on("close", () => {
-    // handleConnectionClosed(ws);
+    // handle connection close
   });
 });
 

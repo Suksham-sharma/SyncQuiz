@@ -21,10 +21,14 @@ jobs:
             ws-server:
               - 'ws-server/**'
 
-  api-server-tests:
+  backend-tests:
     needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    if: ${{ needs.changes.outputs.backend }}
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
 
     steps:
       - uses: actions/checkout@v3
@@ -34,18 +38,28 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install Dependencies
-        working-directory: ./backend
-        run: npm install
+        run: npm ci
 
       - name: Build the Project
-        working-directory: ./backend
         run: npm run build
 
   ws-server-tests:
     needs: changes
-    if: ${{ needs.changes.outputs.ws-server == 'true' }}
+    if: ${{ needs.changes.outputs.ws-server }}
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./ws-server
 
     steps:
       - uses: actions/checkout@v3
@@ -55,10 +69,16 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Install Dependencies
-        working-directory: ./ws-server
-        run: npm install
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      - name: Build the project
-        working-directory: ./ws-server
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build the Project
         run: npm run build

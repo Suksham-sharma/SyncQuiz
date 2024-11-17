@@ -47,8 +47,6 @@ export const signup = async (req : Request, res: Response) => {
             password
         }).returning();
 
-        console.log(newUserArray);
-        
         const newUser: newUser = newUserArray[0];
 
         if (!newUser) {

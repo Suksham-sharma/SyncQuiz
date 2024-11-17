@@ -1,0 +1,64 @@
+name: Selective Testing Workflow
+
+on: push
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      ws-server: ${{ steps.filter.outputs.ws-server }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            ws-server:
+              - 'ws-server/**'
+
+  api-server-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Build the Project
+        working-directory: ./backend
+        run: npm run build
+
+  ws-server-tests:
+    needs: changes
+    if: ${{ needs.changes.outputs.ws-server == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install Dependencies
+        working-directory: ./ws-server
+        run: npm install
+
+      - name: Build the project
+        working-directory: ./ws-server
+        run: npm run build

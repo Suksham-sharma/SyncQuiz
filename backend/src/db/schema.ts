@@ -16,7 +16,7 @@ export const quizTable = pgTable("quiz", {
   bgImageUrl: varchar("bg_image_url", { length: 255 }).notNull(),
   createdBy: integer("created_by")
     .notNull()
-    .references(() => usersTable.id),
+    .references(() => usersTable.id, {onDelete: 'cascade'}),
   ...timestamps,
 });
 
@@ -26,7 +26,7 @@ export const questionTable = pgTable("question", {
   imageUrl: varchar("image_url", { length: 255 }),
   quizId: integer("quiz_id")
     .notNull()
-    .references(() => quizTable.id),
+    .references(() => quizTable.id, {onDelete: 'cascade'}),
   ...timestamps,
 });
 
@@ -35,7 +35,7 @@ export const optionTable = pgTable("option", {
   value: varchar().notNull(),
   questionId: integer("question_id")
     .notNull()
-    .references(() => questionTable.id),
+    .references(() => questionTable.id, {onDelete: 'cascade'}),
   ...timestamps,
 });
 
@@ -43,10 +43,10 @@ export const answerTable = pgTable("answer", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   questionId: integer("question_id")
     .notNull()
-    .references(() => questionTable.id),
+    .references(() => questionTable.id, {onDelete: 'cascade'}),
   optionId: integer("option_id")
     .notNull()
-    .references(() => optionTable.id),
+    .references(() => optionTable.id , { onDelete: 'cascade'}),
   answerDescription: varchar("answer_description"),
   ...timestamps,
 });

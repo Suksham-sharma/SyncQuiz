@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { answerTable, optionTable, questionTable, quizTable } from "../db/schema";
 
 export const getAllQuiz = async (req: Request, res: Response) => {
@@ -100,9 +100,9 @@ export const createQuiz = async (req: Request, res: Response) => {
     }
 }
 
-export const addQuizQuestions = async (req: Request, res: Response) => {
+export const addQuizQuestionsData = async (req: Request, res: Response) => {
 
-    const { quizId } = req.params;
+    const { quizIds } = req.params;
     const { questions } = req.body;
 
     try {
@@ -122,7 +122,7 @@ export const addQuizQuestions = async (req: Request, res: Response) => {
         const quizExists = await db
             .select({ id: quizTable.id })
             .from(quizTable)
-            .where(eq(quizTable.id, Number(quizId)))
+            .where(eq(quizTable.id, Number(quizIds)))
             .execute();
 
         if (quizExists.length === 0) {
@@ -137,7 +137,7 @@ export const addQuizQuestions = async (req: Request, res: Response) => {
                     .values({
                         question: questionData.question,
                         imageUrl: questionData.imageUrl || null,
-                        quizId: Number(quizId)
+                        quizId: Number(quizIds)
                     })
                     .returning({ id: questionTable.id });
 
@@ -225,3 +225,161 @@ export const editQuizMetaData = async (req: Request, res: Response) => {
         return;
     }
 }
+
+export const editQuizQuestionData = async (req: Request, res: Response) => {
+    const { questionId } = req.params;
+    const { question, options, answers, quizId } = req.body;
+
+    try {
+        if (!questionId || !quizId) {
+            res.status(400).json({ 
+                message: !questionId ? "Question ID is required" : "Quiz ID is required" 
+            });
+            return;
+        }
+
+        const quiz = await db
+            .select()
+            .from(quizTable)
+            .where(and(
+                eq(quizTable.id, Number(quizId)), 
+                eq(quizTable.createdBy, req.user.id)
+            ))
+            .execute();
+
+        if (quiz.length === 0) {
+            res.status(400).json({
+                error: 'Not_Found',
+                message: 'No quiz exists with given quizId and userId'
+            });
+            return;
+        }
+
+        const existingQuestion = await db
+            .select()
+            .from(questionTable)
+            .where(eq(questionTable.id, Number(questionId)))
+            .execute();
+
+        if (existingQuestion.length === 0) {
+            res.status(404).json({ message: "Question not found" });
+            return;
+        }
+
+        const correctOptions = options?.filter((opt: any) => opt.isAns) || [];
+        if (correctOptions.length > 1) {
+            res.status(400).json({
+                message: "Only 1 option can be correct"
+            });
+            return;
+        }
+
+        await db.transaction(async (tx) => {
+            if (question?.value || question?.imageUrl !== undefined) {
+                await tx
+                    .update(questionTable)
+                    .set({
+                        ...(question.value && { question: question.value }),
+                        imageUrl: question.imageUrl || null
+                    })
+                    .where(eq(questionTable.id, Number(questionId)));
+            }
+
+            const existingOptions = await tx
+                .select({
+                    id: optionTable.id
+                })
+                .from(optionTable)
+                .where(eq(optionTable.questionId, Number(questionId)))
+                .execute();
+
+            const remainingOptionIds = new Set(existingOptions.map(opt => opt.id));
+
+            const currentAnswer = await tx
+                .select()
+                .from(answerTable)
+                .where(eq(answerTable.questionId, Number(questionId)))
+                .execute();
+
+            let hasSetNewAnswer = false;
+
+            if (options && options.length > 0) {
+                for (const opt of options) {
+                    if (opt.id) {
+                        await tx
+                            .update(optionTable)
+                            .set({
+                                ...(opt.value && { value: opt.value })
+                            })
+                            .where(eq(optionTable.id, opt.id));
+
+                        remainingOptionIds.delete(opt.id);
+
+                        if (opt.isAns && !hasSetNewAnswer) {
+                            if (!currentAnswer.length || currentAnswer[0].optionId !== opt.id) {
+                                await tx.delete(answerTable)
+                                    .where(eq(answerTable.questionId, Number(questionId)));
+
+                                await tx.insert(answerTable).values({
+                                    questionId: Number(questionId),
+                                    optionId: opt.id,
+                                    answerDescription: answers?.[0]?.answerDescription || 
+                                        (currentAnswer[0]?.answerDescription || "Correct Answer")
+                                });
+                            }
+                            hasSetNewAnswer = true;
+                        }
+                    } else {
+                        const [newOption] = await tx
+                            .insert(optionTable)
+                            .values({
+                                value: opt.value,
+                                questionId: Number(questionId)
+                            })
+                            .returning({ id: optionTable.id });
+
+                        if (opt.isAns && !hasSetNewAnswer) {
+                            await tx.delete(answerTable)
+                                .where(eq(answerTable.questionId, Number(questionId)));
+
+                            await tx.insert(answerTable).values({
+                                questionId: Number(questionId),
+                                optionId: newOption.id,
+                                answerDescription: answers?.[0]?.answerDescription || 
+                                    (currentAnswer[0]?.answerDescription || "Correct Answer")
+                            });
+                            hasSetNewAnswer = true;
+                        }
+                    }
+                }
+            }
+
+            if (remainingOptionIds.size > 0) {
+                const deletingCorrectAnswer = currentAnswer.length > 0 && 
+                    remainingOptionIds.has(currentAnswer[0].optionId);
+
+                await tx.delete(optionTable)
+                    .where(inArray(optionTable.id, Array.from(remainingOptionIds)));
+
+                if (deletingCorrectAnswer && !hasSetNewAnswer) {
+                    await tx.delete(answerTable)
+                        .where(eq(answerTable.questionId, Number(questionId)));
+                }
+            }
+
+            if (answers?.[0]?.answerDescription && currentAnswer.length > 0) {
+                await tx
+                    .update(answerTable)
+                    .set({
+                        answerDescription: answers[0].answerDescription
+                    })
+                    .where(eq(answerTable.questionId, Number(questionId)));
+            }
+        });
+
+        res.status(200).json({ message: "Question updated successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

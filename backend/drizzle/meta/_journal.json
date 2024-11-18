@@ -15,6 +15,13 @@
       "when": 1731794684561,
       "tag": "0001_marvelous_puma",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1731887556685,
+      "tag": "0002_thankful_joystick",
+      "breakpoints": true
     }
   ]
 }

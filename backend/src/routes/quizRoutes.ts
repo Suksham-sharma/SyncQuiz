@@ -1,12 +1,13 @@
 import {Router} from 'express';
 import { protectRoute } from '../middleware/auth';
-import { addQuizQuestions, editQuizMetaData, getAllQuiz, deleteQuiz, createQuiz } from '../controller/quizController';
+import { addQuizQuestionsData, editQuizMetaData, getAllQuiz, deleteQuiz, createQuiz, editQuizQuestionData } from '../controller/quizController';
 
 export const quizRoutes = Router();
 
 quizRoutes.get('/', protectRoute, getAllQuiz);
-quizRoutes.delete('/:quizId', protectRoute, deleteQuiz);
 quizRoutes.post('/', protectRoute, createQuiz);
-quizRoutes.post('/:quizId', protectRoute, addQuizQuestions);
 quizRoutes.put('/:quizId', protectRoute, editQuizMetaData);
+quizRoutes.delete('/:quizId', protectRoute, deleteQuiz);
 
+quizRoutes.post('/:quizIds', protectRoute, addQuizQuestionsData);
+quizRoutes.put('/question/:questionId', protectRoute, editQuizQuestionData);

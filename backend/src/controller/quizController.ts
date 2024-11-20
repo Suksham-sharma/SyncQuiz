@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { answerTable, optionTable, questionTable, quizTable } from "../db/schema";
 
 export const getAllQuiz = async (req: Request, res: Response) => {
@@ -100,9 +100,9 @@ export const createQuiz = async (req: Request, res: Response) => {
     }
 }
 
-export const addQuizQuestions = async (req: Request, res: Response) => {
+export const addQuizQuestionsData = async (req: Request, res: Response) => {
 
-    const { quizId } = req.params;
+    const { quizIds } = req.params;
     const { questions } = req.body;
 
     try {
@@ -122,7 +122,7 @@ export const addQuizQuestions = async (req: Request, res: Response) => {
         const quizExists = await db
             .select({ id: quizTable.id })
             .from(quizTable)
-            .where(eq(quizTable.id, Number(quizId)))
+            .where(eq(quizTable.id, Number(quizIds)))
             .execute();
 
         if (quizExists.length === 0) {
@@ -137,7 +137,7 @@ export const addQuizQuestions = async (req: Request, res: Response) => {
                     .values({
                         question: questionData.question,
                         imageUrl: questionData.imageUrl || null,
-                        quizId: Number(quizId)
+                        quizId: Number(quizIds)
                     })
                     .returning({ id: questionTable.id });
 
@@ -225,3 +225,121 @@ export const editQuizMetaData = async (req: Request, res: Response) => {
         return;
     }
 }
+//TODO:OPTIMIZE
+export const editQuizQuestionData = async (req: Request, res: Response) => {
+    const { questionId } = req.params;
+    const { question, options, answers, quizId } = req.body;
+
+    try {
+        if (!questionId || !quizId) {
+            res.status(400).json({
+                message: !questionId ? "Question ID is required" : "Quiz ID is required"
+            });
+            return;
+        }
+
+        const quiz = await db.select().from(quizTable).where(and(
+            eq(quizTable.id, Number(quizId)),
+            eq(quizTable.createdBy, req.user.id)
+        )).execute();
+
+        if (quiz.length === 0) {
+            res.status(400).json({
+                error: 'Not_Found',
+                message: 'No quiz exists with given quizId and userId'
+            });
+            return;
+        }
+
+        const existingQuestion = await db.select().from(questionTable).where(eq(questionTable.id, Number(questionId))).execute();
+
+        if (existingQuestion.length === 0) {
+            res.status(404).json({ message: "Question not found" });
+            return;
+        }
+
+        const correctOptions = options?.filter((opt: any) => opt.isAns) || [];
+        if (correctOptions.length > 1) {
+            res.status(400).json({ message: "Only 1 option can be correct" });
+            return;
+        }
+
+        await db.transaction(async (tx) => {
+            if (question?.value || question?.imageUrl !== undefined) {
+                await tx.update(questionTable).set({
+                    question: question.value,
+                    imageUrl: question.imageUrl || null,
+                    updated_at: sql`NOW()`
+                }).where(eq(questionTable.id, Number(questionId)));
+            }
+
+            if (options && options.length > 0) {
+                const existingOptions = await tx.select({ id: optionTable.id }).from(optionTable)
+                    .where(eq(optionTable.questionId, Number(questionId))).execute();
+
+                const existingOptionIds = new Set(existingOptions.map(opt => opt.id));
+                const inputOptionIds = new Set(options?.filter((opt: any) => opt.id).map((opt: any) => opt.id));
+
+                const [currentAnswer] = await tx.select().from(answerTable).where(eq(answerTable.questionId, Number(questionId))).execute();
+                if (!inputOptionIds.has(currentAnswer.optionId)) {
+                    db.delete(answerTable).where(eq(answerTable.questionId, Number(questionId))).execute();
+                }
+                for (const opt of options) {
+                    if (opt.id) {
+                        await tx.update(optionTable).set({
+                            value: opt.value,
+                            updated_at: sql`NOW()`
+                        }).where(eq(optionTable.id, opt.id));
+
+                        existingOptionIds.delete(opt.id)
+                    } else {
+
+                        const [newOption] = await tx.insert(optionTable).values({
+                            value: opt.value,
+                            questionId: Number(questionId)
+                        }).returning({ id: optionTable.id });
+
+                        opt.id = newOption.id
+                    }
+
+                    if (opt.isAns) {
+                        if (answerTable.optionId !== opt.id) {
+                            await tx.delete(answerTable)
+                                .where(eq(answerTable.questionId, Number(questionId)));
+
+                            await tx.insert(answerTable).values({
+                                questionId: Number(questionId),
+                                optionId: opt.id,
+                                answerDescription: answers?.[0]?.answerDescription ||
+                                    (currentAnswer?.answerDescription)
+                            });
+                        }
+                    }
+                }
+
+                const optionsToRemove = [...existingOptionIds]
+                if (optionsToRemove.length > 0) {
+                    await tx.delete(optionTable)
+                        .where(inArray(optionTable.id, optionsToRemove));
+                }
+            }
+            if (answers?.[0]?.answerDescription) {
+                await tx
+                    .update(answerTable)
+                    .set({
+                        answerDescription: answers[0].answerDescription,
+                        updated_at: sql`NOW()`
+                    })
+                    .where(eq(answerTable.questionId, Number(questionId)));
+
+            }
+        });
+
+        res.status(200).json({ message: "Question updated successfully" });
+        return;
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+        return;
+    }
+};

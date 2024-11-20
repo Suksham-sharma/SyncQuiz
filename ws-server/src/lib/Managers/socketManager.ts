@@ -1,11 +1,14 @@
 import http from "http";
-import WebSocket, { WebSocketServer } from "ws";
+import WebSocket, { RawData, WebSocketServer } from "ws";
+import { userManager } from "./userManager";
 
 class SocketManager {
   static instance: SocketManager;
   private server: http.Server;
+  private userManager;
 
   constructor() {
+    this.userManager = userManager;
     this.server = http.createServer();
     const wss = new WebSocketServer({ server: this.server });
 
@@ -35,7 +38,7 @@ class SocketManager {
       ws.on("error", console.error);
 
       ws.on("message", (message) => {
-        // handle incoming message
+        this.handleMessage(message, ws);
 
         console.log(`Recieved message`, message);
       });
@@ -43,6 +46,15 @@ class SocketManager {
       ws.on("close", () => {
         // handle connection close
       });
+    } catch (error: any) {
+      console.log("Something Went Wrong", error.message);
+    }
+  }
+
+  handleMessage(message: RawData, ws: WebSocket) {
+    try {
+      const stringifiedMessage = message.toString();
+      this.userManager.handleIncomingWSRequest(stringifiedMessage, ws);
     } catch (error: any) {
       console.log("Something Went Wrong", error.message);
     }

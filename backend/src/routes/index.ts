@@ -6,5 +6,5 @@ import { quizRoutes } from "./quizRoutes";
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRoutes);
-apiRouter.use('/user', userRoutes);
-apiRouter.use('/quiz', quizRoutes);
+apiRouter.use("/user", userRoutes);
+apiRouter.use("/quiz", quizRoutes);

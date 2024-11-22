@@ -69,12 +69,25 @@ class UserManager {
 
   // user Actions
   private handleUserRequest(userId: string, payload: any) {
-    // quiz Manager will be called depending upon the action in the payload
+    if (payload.eventType === "joinQuiz") {
+      this.quizManager.joinQuiz(payload.quizId, userId);
+    }
+
+    if (payload.eventType === "submitAnswer") {
+      this.quizManager.submitAnswer(
+        payload.quizId,
+        userId,
+        payload.questionId,
+        payload.answerId
+      );
+    }
   }
 
   // admin Actions
   private handleAdminRequest(userId: string, payload: any) {
-    // same here
+    if (payload.eventType === "createQuiz") {
+      this.quizManager.createQuiz(payload.quizId, userId);
+    }
   }
 }
 

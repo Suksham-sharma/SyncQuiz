@@ -33,21 +33,7 @@ class UserManager {
 
   handleIncomingWSRequest(message: string, ws: WebSocket) {
     try {
-      const { token, payload }: IncomingMessageRequestData =
-        JSON.parse(message);
-
-      const userData = this.getUserStatus(token);
-      if (!userData.info) {
-        this.sendErrorResonse(ws, "Invalid Token");
-        return;
-      }
-
-      if (!userData.info?.type)
-        this.sendErrorResonse(ws, "Unable to Verify User");
-
-      if (userData.info?.type === "creator")
-        this.handleAdminRequest(userData.info?.userId, payload);
-      else this.handleUserRequest(userData.info?.userId, payload);
+      console.log("Message", message);
 
       console.log(`Processed Request`);
     } catch (error: any) {

@@ -1,3 +1,4 @@
+import { getQuizByIdApi } from "../../api";
 import { QUIZES } from "../../db";
 
 class QuizManager {
@@ -19,13 +20,20 @@ class QuizManager {
   }
 
   // create quiz
-  createQuiz(quizId: string, creatorId: string) {
+  async createQuiz(quizId: string, creatorId: string) {
     try {
       const findQuiz = this.getQuizById(quizId);
       if (findQuiz.status) {
         return { message: "Quiz Already Exists" };
       }
-      // fetcg quizData + everything from DB
+
+      const quizData = await getQuizByIdApi(quizId);
+
+      if (!quizData.status) {
+        return { message: "Unable to fetch Quiz Data" };
+      }
+
+      console.log(`Quiz Data`, quizData.quiz);
     } catch (error: any) {}
   }
 

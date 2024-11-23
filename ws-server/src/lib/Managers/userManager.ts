@@ -33,21 +33,7 @@ class UserManager {
 
   handleIncomingWSRequest(message: string, ws: WebSocket) {
     try {
-      const { token, payload }: IncomingMessageRequestData =
-        JSON.parse(message);
-
-      const userData = this.getUserStatus(token);
-      if (!userData.info) {
-        this.sendErrorResonse(ws, "Invalid Token");
-        return;
-      }
-
-      if (!userData.info?.type)
-        this.sendErrorResonse(ws, "Unable to Verify User");
-
-      if (userData.info?.type === "creator")
-        this.handleAdminRequest(userData.info?.userId, payload);
-      else this.handleUserRequest(userData.info?.userId, payload);
+      console.log("Message", message);
 
       console.log(`Processed Request`);
     } catch (error: any) {
@@ -67,14 +53,28 @@ class UserManager {
     }
   }
 
+  // handle incoming message
   // user Actions
   private handleUserRequest(userId: string, payload: any) {
-    // quiz Manager will be called depending upon the action in the payload
+    if (payload.eventType === "joinQuiz") {
+      this.quizManager.joinQuiz(payload.quizId, userId);
+    }
+
+    if (payload.eventType === "submitAnswer") {
+      this.quizManager.submitAnswer(
+        payload.quizId,
+        userId,
+        payload.questionId,
+        payload.answerId
+      );
+    }
   }
 
   // admin Actions
   private handleAdminRequest(userId: string, payload: any) {
-    // same here
+    if (payload.eventType === "createQuiz") {
+      this.quizManager.createQuiz(payload.quizId, userId);
+    }
   }
 }
 

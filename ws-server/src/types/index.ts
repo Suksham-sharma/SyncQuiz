@@ -3,11 +3,13 @@ interface Quiz {
   description: string;
   bgImageUrl: string;
   createdBy: string;
+  currentQuestionIndex: number;
   questions: QuestionMap;
 }
 
 interface Question {
   problem: string;
+  index: number;
   imageUrl: string;
   options: OptionsMap;
   correctAnswer: answer;

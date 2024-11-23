@@ -53,6 +53,7 @@ class UserManager {
     }
   }
 
+  // handle incoming message
   // user Actions
   private handleUserRequest(userId: string, payload: any) {
     if (payload.eventType === "joinQuiz") {

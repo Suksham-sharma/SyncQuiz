@@ -19,19 +19,11 @@ class SocketManager {
     });
 
     this.server.on("upgrade", (request, socket, head) => {
-      const isVerified = this.handleServerVerification(request, socket, head);
-      console.log("Verified", isVerified);
-      if (!isVerified) {
-        console.log("Not Verified");
-        socket.destroy();
-        return;
-      }
-
-      console.log("Upgrade");
+      this.handleServerVerification(request, socket, head);
     });
 
-    wss.on("connection", (ws: WebSocket) => {
-      this.handleWSConnection(ws);
+    wss.on("connection", (ws: WebSocket, request: http.IncomingMessage) => {
+      this.handleWSConnection(ws, request);
     });
   }
 
@@ -63,7 +55,6 @@ class SocketManager {
       console.log("Token", token);
 
       if (!token) {
-        // const errorResponse = "HTTP/1.1 400 Unauthorized\r\n\r\n";
         socket.destroy();
       }
 
@@ -71,24 +62,25 @@ class SocketManager {
 
       if (!status) {
         socket.destroy();
-        return false;
+        return;
       }
 
-      return true;
+      request.userId = userId;
+
+      console.log("User Id", userId);
+      console.log("Upgraded ");
     } else {
       socket.destroy();
     }
   }
 
-  handleWSConnection(ws: WebSocket) {
+  handleWSConnection(ws: WebSocket, request: http.IncomingMessage) {
     try {
       console.log(`${new Date().toISOString()} New client connected`);
       ws.on("error", console.error);
 
       ws.on("message", (message) => {
-        this.handleMessage(message, ws);
-
-        console.log(`Recieved message`, message);
+        this.handleMessage(request, ws, message);
       });
 
       ws.on("close", () => {
@@ -99,11 +91,24 @@ class SocketManager {
     }
   }
 
-  handleMessage(message: RawData, ws: WebSocket) {
+  handleMessage(
+    request: http.IncomingMessage,
+    ws: WebSocket,
+    message: RawData
+  ) {
     try {
+      const userId = request.userId;
+      console.log("User Id", userId);
+
+      if (!userId) {
+        ws.close();
+        console.log("User Id Not Found");
+        return;
+      }
+
       console.log("Message", message);
       const stringifiedMessage = message.toString();
-      this.userManager.handleIncomingWSRequest(stringifiedMessage, ws);
+      this.userManager.handleIncomingWSRequest(stringifiedMessage, ws, userId);
     } catch (error: any) {
       console.log("Something Went Wrong", error.message);
     }

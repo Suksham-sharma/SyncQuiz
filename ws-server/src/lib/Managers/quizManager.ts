@@ -22,12 +22,14 @@ class QuizManager {
   // create quiz
   async createQuiz(quizId: string, creatorId: string) {
     try {
+      console.log(`Creating Quiz here`, quizId);
       const findQuiz = this.getQuizById(quizId);
       if (findQuiz.status) {
         return { message: "Quiz Already Exists" };
       }
 
       const quizData = await getQuizByIdApi(quizId);
+      console.log(`Quiz Data`, quizData);
 
       if (!quizData.status) {
         return { message: "Unable to fetch Quiz Data" };

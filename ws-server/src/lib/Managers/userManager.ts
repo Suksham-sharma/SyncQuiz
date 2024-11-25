@@ -1,4 +1,3 @@
-import { IncomingMessageRequestData } from "../../types/incoming-requests";
 import WebSocket from "ws";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -31,49 +30,37 @@ class UserManager {
     ws.close();
   }
 
-  handleIncomingWSRequest(message: string, ws: WebSocket) {
+  handleIncomingWSRequest(message: string, ws: WebSocket, userId: string) {
     try {
-      console.log("Message", message);
-
+      this.processUserRequest(userId, JSON.parse(message));
       console.log(`Processed Request`);
     } catch (error: any) {
       this.sendErrorResonse(ws, `Something Went Wrong: ${error.message}`);
     }
   }
 
-  private getUserStatus(userToken: string) {
-    try {
-      const info = jwt.verify(
-        userToken,
-        process.env.JWT_SECRET || ""
-      ) as userData;
-      return { info, status: "true" };
-    } catch {
-      return { status: "false" };
-    }
-  }
+  private processUserRequest(userId: string, payload: any) {
+    const { quizId, eventType } = payload;
+    console.log(`Processing User Request`, payload);
 
-  // handle incoming message
-  // user Actions
-  private handleUserRequest(userId: string, payload: any) {
-    if (payload.eventType === "joinQuiz") {
+    if (eventType === "createQuiz") {
+      if (!quizId) return;
+      console.log(`Creating Quiz`, quizId);
+
+      this.quizManager.createQuiz(quizId, userId);
+    }
+
+    if (eventType === "joinQuiz") {
       this.quizManager.joinQuiz(payload.quizId, userId);
     }
 
-    if (payload.eventType === "submitAnswer") {
+    if (eventType === "submitAnswer") {
       this.quizManager.submitAnswer(
         payload.quizId,
         userId,
         payload.questionId,
         payload.answerId
       );
-    }
-  }
-
-  // admin Actions
-  private handleAdminRequest(userId: string, payload: any) {
-    if (payload.eventType === "createQuiz") {
-      this.quizManager.createQuiz(payload.quizId, userId);
     }
   }
 }

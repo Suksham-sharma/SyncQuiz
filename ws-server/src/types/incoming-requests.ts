@@ -1,4 +1,8 @@
-export interface IncomingMessageRequestData {
-  token: string;
-  payload: any;
+import { IncomingMessage } from "http";
+
+declare module "http" {
+  interface IncomingMessage {
+    userId?: string;
+    token?: string;
+  }
 }

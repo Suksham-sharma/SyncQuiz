@@ -1,14 +1,5 @@
 import WebSocket from "ws";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import { quizManager } from "./quizManager";
-
-dotenv.config();
-
-interface userData {
-  userId: string;
-  type: string;
-}
 
 class UserManager {
   static instance: UserManager;
@@ -30,16 +21,21 @@ class UserManager {
     ws.close();
   }
 
-  handleIncomingWSRequest(message: string, ws: WebSocket, userId: string) {
+  handleIncomingWSRequest(
+    message: string,
+    ws: WebSocket,
+    userId: string,
+    authToken?: string
+  ) {
     try {
-      this.processUserRequest(userId, JSON.parse(message));
+      this.processUserRequest(userId, JSON.parse(message), authToken);
       console.log(`Processed Request`);
     } catch (error: any) {
       this.sendErrorResonse(ws, `Something Went Wrong: ${error.message}`);
     }
   }
 
-  private processUserRequest(userId: string, payload: any) {
+  private processUserRequest(userId: string, payload: any, authToken?: string) {
     const { quizId, eventType } = payload;
     console.log(`Processing User Request`, payload);
 
@@ -47,7 +43,7 @@ class UserManager {
       if (!quizId) return;
       console.log(`Creating Quiz`, quizId);
 
-      this.quizManager.createQuiz(quizId, userId);
+      this.quizManager.createQuiz(quizId, userId, authToken);
     }
 
     if (eventType === "joinQuiz") {

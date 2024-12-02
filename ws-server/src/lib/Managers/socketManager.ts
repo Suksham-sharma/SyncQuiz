@@ -66,6 +66,7 @@ class SocketManager {
       }
 
       request.userId = userId;
+      request.token = token;
 
       console.log("User Id", userId);
       console.log("Upgraded ");
@@ -97,7 +98,7 @@ class SocketManager {
     message: RawData
   ) {
     try {
-      const userId = request.userId;
+      const { userId, token } = request;
       console.log("User Id", userId);
 
       if (!userId) {
@@ -108,7 +109,12 @@ class SocketManager {
 
       console.log("Message", message);
       const stringifiedMessage = message.toString();
-      this.userManager.handleIncomingWSRequest(stringifiedMessage, ws, userId);
+      this.userManager.handleIncomingWSRequest(
+        stringifiedMessage,
+        ws,
+        userId,
+        token
+      );
     } catch (error: any) {
       console.log("Something Went Wrong", error.message);
     }

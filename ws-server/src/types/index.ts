@@ -1,4 +1,5 @@
-interface Quiz {
+export interface QuizStructure {
+  id: string;
   heading: string;
   description: string;
   bgImageUrl: string;
@@ -12,7 +13,7 @@ interface Question {
   index: number;
   imageUrl: string;
   options: OptionsMap;
-  correctAnswer: answer;
+  correctAnswer: answer[];
 }
 
 interface Options {
@@ -28,4 +29,4 @@ interface answer {
 
 type OptionsMap = Record<string, Options>;
 type QuestionMap = Record<string, Question>;
-export type QuizMap = Record<string, Quiz>;
+export type QuizMap = Record<string, QuizStructure>;

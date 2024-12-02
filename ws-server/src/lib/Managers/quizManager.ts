@@ -1,8 +1,14 @@
 import { getQuizByIdApi } from "../../api";
 import { QUIZES } from "../../db";
+import { quizModel } from "../Models/Quiz";
 
 class QuizManager {
   static instance: QuizManager;
+  private quizModel;
+
+  constructor() {
+    this.quizModel = quizModel;
+  }
 
   static getInstance() {
     if (!this.instance) {
@@ -20,23 +26,26 @@ class QuizManager {
   }
 
   // create quiz
-  async createQuiz(quizId: string, creatorId: string) {
+  async createQuiz(quizId: string, creatorId: string, authToken?: string) {
     try {
       console.log(`Creating Quiz here`, quizId);
       const findQuiz = this.getQuizById(quizId);
       if (findQuiz.status) {
+        console.log(`Quiz Already Exists`);
         return { message: "Quiz Already Exists" };
       }
 
-      const quizData = await getQuizByIdApi(quizId);
-      console.log(`Quiz Data`, quizData);
+      const quizData = await getQuizByIdApi(quizId, authToken);
+      const { status, quiz } = quizData;
 
-      if (!quizData.status) {
+      if (!status) {
         return { message: "Unable to fetch Quiz Data" };
       }
 
-      console.log(`Quiz Data`, quizData.quiz);
-    } catch (error: any) {}
+      this.quizModel.createQuiz(quiz.data);
+    } catch (error: any) {
+      console.log(`Error`, error.message);
+    }
   }
 
   // update quiz, real time quiz updates : questions which have been passed can't be updated / deleted

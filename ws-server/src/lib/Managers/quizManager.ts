@@ -49,7 +49,16 @@ class QuizManager {
   }
 
   // update quiz, real time quiz updates : questions which have been passed can't be updated / deleted
-  updateQuiz(quizId: string, creatorId: string) {}
+  updateQuiz(quizId: string, creatorId: string) {
+    try {
+      const findQuiz = this.getQuizById(quizId);
+      if (!findQuiz.status) {
+        return { message: "Quiz Not Found" };
+      }
+      const quizData = getQuizByIdApi(quizId);
+      // update the quiz with latest data
+    } catch (error: any) {}
+  }
 
   //  start quiz
   startQuiz(quizId: string, creatorId: string) {}

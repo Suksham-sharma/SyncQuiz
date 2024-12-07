@@ -10,12 +10,14 @@ export class RedisManager {
     this.queueClient.connect();
   }
 
-  public static getInstance() {
+  static getInstance() {
     if (!RedisManager.instance) {
       RedisManager.instance = new RedisManager();
     }
     return RedisManager.instance;
   }
+
+  pushDataToQueue() {}
 }
 
 export const redisManager = RedisManager.getInstance();

@@ -38,19 +38,22 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Cache Node.js modules
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Cache pnpm Store
         uses: actions/cache@v3
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Build the Project
-        run: npm run build
+        run: pnpm run build
 
   ws-server-tests:
     needs: changes
@@ -69,16 +72,19 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Cache Node.js modules
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Cache pnpm Store
         uses: actions/cache@v3
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Build the Project
-        run: npm run build
+        run: pnpm run build
